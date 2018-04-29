@@ -49,7 +49,6 @@ class ReflexAgent(Agent):
 
         successor_game_state = current_game_state.generate_successor(action=action)
         board = successor_game_state.board
-        #max_tile = successor_game_state.max_tile
         score = successor_game_state.score
 
         "*** YOUR CODE HERE ***"
@@ -58,8 +57,9 @@ class ReflexAgent(Agent):
 
         return max([left_right, up_down]) + score
 
+
 def _left_right_score(board):
-    '''' returns an estimates score for a left or right move'''
+    """ returns an estimates score for a left or right move """
     counter = 0
     for i in range(len(board)):
         node = board[i][0]
@@ -71,8 +71,9 @@ def _left_right_score(board):
                 counter += node*node
     return counter
 
+
 def _up_down_score(board):
-    '''' returns an estimates score for a up or down move'''
+    """ returns an estimates score for a up or down move """
     counter = 0
     for i in range(len(board)):
         node = board[0][i]
@@ -137,8 +138,50 @@ class MinmaxAgent(MultiAgentSearchAgent):
         game_state.generate_successor(agent_index, action):
             Returns the successor game state after an agent takes an action
         """
-        """*** YOUR CODE HERE ***"""
-        util.raiseNotDefined()
+        _, best_action = self._minmax(game_state, self.depth)
+        if best_action is None:
+            best_action = Action.STOP
+        return best_action
+
+    class Player:
+        MAX = 0
+        MIN = 1
+
+    def _minmax(self, game_state, depth, player=Player.MAX, action=None):
+        """ MinMax recursive algorithm """
+        if depth == 0:
+            return self.evaluation_function(game_state), action
+        if player == self.Player.MAX:
+            best_value = (-1, None)
+            for action in game_state.get_legal_actions(player):
+                new_game_state = game_state.generate_successor(self.Player.MAX, action)
+                v, _ = self._minmax(new_game_state, depth, self.Player.MIN, action)
+                best_value = self._get_best_value([best_value, (v, action)], self.Player.MAX)
+            return best_value
+        else:
+            best_value = (float('inf'), None)
+            for action in game_state.get_legal_actions(player):
+                new_game_state = game_state.generate_successor(self.Player.MIN, action)
+                v = self._minmax(new_game_state, depth - 1, self.Player.MAX, action)
+                best_value = self._get_best_value([best_value, v], self.Player.MIN)
+            return best_value
+
+    def _get_best_value(self, list_tups, player):
+        """ returns the tuple with the best score depending on the player type """
+        if player == self.Player.MAX:
+            best = list_tups[0]
+            for tup in list_tups:
+                if tup[0] > best[0]:
+                    best = tup
+            return best
+        else:
+            best = list_tups[0]
+            for tup in list_tups:
+                if tup[0] < best[0]:
+                    best = tup
+            return best
+
+
 
 
 
