@@ -253,8 +253,51 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         The opponent should be modeled as choosing uniformly at random from their
         legal moves.
         """
-        """*** YOUR CODE HERE ***"""
-        util.raiseNotDefined()
+        _, best_action = self._expectimax(game_state, self.depth)
+        if best_action is None:
+            best_action = Action.STOP
+        return best_action
+
+    class Player:
+        MAX = 0
+        MIN = 1
+
+    def _expectimax(self, game_state, depth, player=Player.MAX, action=None):
+        """ Expectimax recursive algorithm """
+        if depth == 0:
+            return self.evaluation_function(game_state), action
+        if player == self.Player.MAX:
+            best_value = (-1, None)
+            for action in game_state.get_legal_actions(player):
+                new_game_state = game_state.generate_successor(player, action)
+                v, _ = self._minmax(new_game_state, depth, self.Player.MIN, action)
+                best_value = self._get_best_value([best_value, (v, action)], player)
+            return best_value
+        else:
+            values = list()
+            for action in game_state.get_legal_actions(player):
+                new_game_state = game_state.generate_successor(player, action)
+                v, _ = self._minmax(new_game_state, depth-1, self.Player.MAX, action)
+                values.append(v)
+            probability = 1/len(values)
+            expected = sum(map(lambda x: x*probability, values))
+            return expected, None
+
+
+    def _get_best_value(self, list_tups, player):
+        """ returns the tuple with the best score depending on the player type """
+        if player == MinmaxAgent.Player.MAX:
+            best = list_tups[0]
+            for tup in list_tups:
+                if tup[0] > best[0]:
+                    best = tup
+            return best
+        else:
+            best = list_tups[0]
+            for tup in list_tups:
+                if tup[0] < best[0]:
+                    best = tup
+            return best
 
 def better_evaluation_function(current_game_state):
     """
