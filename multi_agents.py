@@ -18,7 +18,7 @@ def _get_best_value(list_tups, player):
         @param list_tups a list of tuples [(score, action), (score, action), ...]
         @param player current player
         @return the tuple with the best value according to the given player """
-    if player == MinmaxAgent.Player.MAX:
+    if player == MAX_PLAYER:
         best = list_tups[0]
         for tup in list_tups:
             if tup[0] > best[0]:
