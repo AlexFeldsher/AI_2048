@@ -68,7 +68,7 @@ def _left_right_score(board):
             if node == 0 or next_node != 0 and next_node != node:
                 node = next_node
             elif node == next_node and i != 0:
-                counter += node*node
+                counter += node+node
     return counter
 
 
