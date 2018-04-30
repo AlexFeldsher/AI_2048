@@ -154,21 +154,21 @@ class MinmaxAgent(MultiAgentSearchAgent):
         if player == self.Player.MAX:
             best_value = (-1, None)
             for action in game_state.get_legal_actions(player):
-                new_game_state = game_state.generate_successor(self.Player.MAX, action)
+                new_game_state = game_state.generate_successor(player, action)
                 v, _ = self._minmax(new_game_state, depth, self.Player.MIN, action)
-                best_value = self._get_best_value([best_value, (v, action)], self.Player.MAX)
+                best_value = self._get_best_value([best_value, (v, action)], player)
             return best_value
         else:
             best_value = (float('inf'), None)
             for action in game_state.get_legal_actions(player):
-                new_game_state = game_state.generate_successor(self.Player.MIN, action)
-                v = self._minmax(new_game_state, depth - 1, self.Player.MAX, action)
-                best_value = self._get_best_value([best_value, v], self.Player.MIN)
+                new_game_state = game_state.generate_successor(player, action)
+                v, _ = self._minmax(new_game_state, depth-1, self.Player.MAX, action)
+                best_value = self._get_best_value([best_value, (v, action)], player)
             return best_value
 
     def _get_best_value(self, list_tups, player):
         """ returns the tuple with the best score depending on the player type """
-        if player == self.Player.MAX:
+        if player == MinmaxAgent.Player.MAX:
             best = list_tups[0]
             for tup in list_tups:
                 if tup[0] > best[0]:
@@ -182,9 +182,6 @@ class MinmaxAgent(MultiAgentSearchAgent):
             return best
 
 
-
-
-
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
     Your minimax agent with alpha-beta pruning (question 3)
@@ -195,8 +192,53 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         Returns the minimax action using self.depth and self.evaluationFunction
         """
         """*** YOUR CODE HERE ***"""
-        util.raiseNotDefined()
+        _, action = self._alpha_beta(game_state, self.depth)
+        if action is None:
+            action = Action.STOP
+        return action
 
+    class Player:
+        MAX = 0
+        MIN = 1
+
+    def _alpha_beta(self, game_state, depth, alpha=(-1, None), beta=(float('inf'), None), action=None, player=Player.MAX):
+        if depth == 0:
+            return score_evaluation_function(game_state), action
+        if player == MinmaxAgent.Player.MAX:
+            v = (-1, None)
+            for action in game_state.get_legal_actions(player):
+                state = game_state.generate_successor(self.Player.MAX, action)
+                tmp, _ = self._alpha_beta(state, depth, alpha, beta, action, self.Player.MIN)
+                v = self._get_best_value([v, (tmp, action)], player)
+                alpha = self._get_best_value([alpha, v], player)
+                if beta[0] <= alpha[0]:
+                    break
+            return v
+        else:
+            v = (float('inf'), None)
+            for action in game_state.get_legal_actions(player):
+                state = game_state.generate_successor(self.Player.MIN, action)
+                tmp, _ = self._alpha_beta(state, depth-1, alpha, beta, action, self.Player.MAX)
+                v = self._get_best_value([v, (tmp, action)], player)
+                beta = self._get_best_value([beta, v], player)
+                if beta[0] <= alpha[0]:
+                    break
+            return v
+
+    def _get_best_value(self, list_tups, player):
+        """ returns the tuple with the best score depending on the player type """
+        if player == MinmaxAgent.Player.MAX:
+            best = list_tups[0]
+            for tup in list_tups:
+                if tup[0] > best[0]:
+                    best = tup
+            return best
+        else:
+            best = list_tups[0]
+            for tup in list_tups:
+                if tup[0] < best[0]:
+                    best = tup
+            return best
 
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
@@ -213,10 +255,6 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         """
         """*** YOUR CODE HERE ***"""
         util.raiseNotDefined()
-
-
-
-
 
 def better_evaluation_function(current_game_state):
     """
