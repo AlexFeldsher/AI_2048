@@ -8,7 +8,7 @@ from game import Agent, Action
 MAX_PLAYER = 0
 MIN_PLAYER = 1
 INFINITY = float('inf')
-MIN_INFINITY = -1
+MIN_INFINITY = float('-inf')
 
 # helper functions ############################################
 
@@ -32,33 +32,45 @@ def _get_best_value(list_tups, player):
         return best
 
 
-def _left_right_score(board):
-    """ returns an estimates score for a left or right move """
-    counter = 0
+def _left_right(board):
+    """ return an estimated score for a left or right move """
+    estimated_score = 0
+    board = board.copy()
     for i in range(len(board)):
-        node = board[i][0]
         for j in range(len(board)):
-            next_node = board[i][j]
-            if node == 0 or next_node != 0 and next_node != node:
-                node = next_node
-            elif node == next_node and i != 0:
-                counter += node+node
-    return counter
+            node = board[i][j]
+            if node == 0:
+                continue
+            for k in range(j, len(board)):
+                curr = board[i][k]
+                if j == k:
+                    continue
+                if node == curr:
+                    estimated_score += node*2
+                    board[i][j] = 0
+                    board[i][k] = 0
+
+    return estimated_score
 
 
-def _up_down_score(board):
-    """ returns an estimates score for a up or down move """
-    counter = 0
+def _up_down(board):
+    """ return an estimated score for an up or down move """
+    estimated_score = 0
+    board = board.copy()
     for i in range(len(board)):
-        node = board[0][i]
         for j in range(len(board)):
-            next_node = board[j][i]
-            if node == 0 or next_node != 0 and next_node != node:
-                node = next_node
-            elif node == next_node and i != 0:
-                counter += node+node
-    return counter
-
+            node = board[j][i]
+            if node == 0:
+                continue
+            for k in range(j, len(board)):
+                curr = board[k][i]
+                if j == k:
+                    continue
+                if node == curr:
+                    estimated_score += node*2
+                    board[j][i] = 0
+                    board[k][i] = 0
+    return estimated_score
 
 # end of helper functions ############################################
 
@@ -110,8 +122,8 @@ class ReflexAgent(Agent):
         board = successor_game_state.board
         score = successor_game_state.score
 
-        left_right = _left_right_score(board)
-        up_down = _up_down_score(board)
+        left_right = _left_right(board)
+        up_down = _up_down(board)
 
         return max([left_right, up_down]) + score
 
@@ -183,14 +195,16 @@ class MinmaxAgent(MultiAgentSearchAgent):
             for action in game_state.get_legal_actions(player):
                 new_game_state = game_state.generate_successor(player, action)
                 v, _ = self._minmax(new_game_state, depth, MIN_PLAYER, action)
-                best_value = _get_best_value([best_value, (v, action)], player)
+                if v != INFINITY:
+                    best_value = _get_best_value([best_value, (v, action)], player)
             return best_value
         else:
             best_value = (INFINITY, None)
             for action in game_state.get_legal_actions(player):
                 new_game_state = game_state.generate_successor(player, action)
                 v, _ = self._minmax(new_game_state, depth-1, MAX_PLAYER, action)
-                best_value = _get_best_value([best_value, (v, action)], player)
+                if v != MIN_INFINITY:
+                    best_value = _get_best_value([best_value, (v, action)], player)
             return best_value
 
 
@@ -211,14 +225,15 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
 
     def _alpha_beta(self, game_state, depth, alpha=(MIN_INFINITY, None), beta=(INFINITY, None), action=None, player=MAX_PLAYER):
         if depth == 0:
-            return score_evaluation_function(game_state), action
+            return self.evaluation_function(game_state), action
         if player == MAX_PLAYER:
             v = (MIN_INFINITY, None)
             for action in game_state.get_legal_actions(player):
                 state = game_state.generate_successor(MAX_PLAYER, action)
                 tmp, _ = self._alpha_beta(state, depth, alpha, beta, action, MIN_PLAYER)
-                v = _get_best_value([v, (tmp, action)], player)
-                alpha = _get_best_value([alpha, v], player)
+                if tmp != INFINITY:
+                    v = _get_best_value([v, (tmp, action)], player)
+                    alpha = _get_best_value([alpha, v], player)
                 if beta[0] <= alpha[0]:
                     break
             return v
@@ -227,8 +242,9 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
             for action in game_state.get_legal_actions(player):
                 state = game_state.generate_successor(player, action)
                 tmp, _ = self._alpha_beta(state, depth-1, alpha, beta, action, MAX_PLAYER)
-                v = _get_best_value([v, (tmp, action)], player)
-                beta = _get_best_value([beta, v], player)
+                if tmp != MIN_INFINITY:
+                    v = _get_best_value([v, (tmp, action)], player)
+                    beta = _get_best_value([beta, v], player)
                 if beta[0] <= alpha[0]:
                     break
             return v
@@ -260,19 +276,22 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
             for action in game_state.get_legal_actions(player):
                 new_game_state = game_state.generate_successor(player, action)
                 v, _ = self._expectimax(new_game_state, depth, MIN_PLAYER, action)
-                best_value = _get_best_value([best_value, (v, action)], player)
+                if v != INFINITY:
+                    best_value = _get_best_value([best_value, (v, action)], player)
             return best_value
         else:
             values = list()
             for action in game_state.get_legal_actions(player):
                 new_game_state = game_state.generate_successor(player, action)
                 v, _ = self._expectimax(new_game_state, depth-1, MAX_PLAYER, action)
-                values.append(v)
-            probability = 1/len(values)
-            expected = sum(map(lambda x: x*probability, values))
+                if v != MIN_INFINITY:
+                    values.append(v)
+            if len(values) == 0:
+                expected = INFINITY
+            else:
+                probability = 1/len(values)
+                expected = sum(map(lambda x: x*probability, values))
             return expected, None
-
-
 
 
 def better_evaluation_function(current_game_state):
@@ -281,7 +300,6 @@ def better_evaluation_function(current_game_state):
 
     DESCRIPTION: <write something here so we know what you did>
     """
-    "*** YOUR CODE HERE ***"
     util.raiseNotDefined()
 
 
